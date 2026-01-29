@@ -98,8 +98,11 @@
 </div>
 
 <script>
-/** ✅ ONLY CHANGE 1: API_URL same webapp (hardcode हटाया) */
-const API_URL = location.origin + location.pathname;
+/**
+ * ✅ GitHub Pages / Any hosting ke liye:
+ * API_URL MUST be your Apps Script WebApp /exec URL
+ */
+const API_URL = "https://script.google.com/macros/s/AKfycby6J1PUZdgXAh-T7GVN5SJtw3lM_JeFUyDtj6Zk71ppOik-4wTkqW6zFyswwagNRs76UQ/exec";
 
 const START_HOUR = 10, END_HOUR = 19, LUNCH_START = 14, LUNCH_END = 15;
 let selectedSlot = "";
@@ -123,10 +126,8 @@ function isTodaySelected(){ return $("date").value === todayYMD(); }
 
 function renderSlots(){
   const box=$("slots");
-
-  /** ✅ ONLY CHANGE 2: safety check ताकि blank na rahe */
   if(!box){
-    openModal("❌ Error", "Slot box (#slots) missing. Customer page HTML mismatch.");
+    openModal("❌ Error", "Slot box (#slots) missing. HTML mismatch.");
     return;
   }
 
