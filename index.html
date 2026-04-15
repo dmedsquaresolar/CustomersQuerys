@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Customer Page</title>
+<style>
+  body{margin:0;font-family:Arial;background:#000;color:#111}
+  .wrap{max-width:900px;margin:auto;padding:18px}
+  h2{color:#111;margin:0 0 10px}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px;margin:12px 0;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+  label{font-size:12px;opacity:.85;display:block;margin:10px 0 6px}
+  input,select,textarea,button{
+    width:100%;padding:10px;border-radius:10px;border:1px solid #d1d5db;
+    background:#fff;color:#111;outline:none;box-sizing:border-box}
+  input:focus,select:focus,textarea:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+  textarea{min-height:90px;resize:vertical}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:650px){.row{grid-template-columns:1fr}}
+  .slots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+  @media(max-width:650px){.slots{grid-template-columns:repeat(2,1fr)}}
+  .slot{
+    padding:10px;border-radius:12px;border:1px solid #d1d5db;background:#f3f4f6;
+    cursor:pointer;text-align:center;user-select:none
+  }
+  .slot.selected{background:#2563eb;border-color:#2563eb;color:#fff}
+  .slot.disabled{opacity:.45;text-decoration:line-through;cursor:not-allowed}
+  button{background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;margin-top:12px;border:none}
+  button:disabled{opacity:.6;cursor:not-allowed}
+  .btn2{background:#f3f4f6;color:#111;border:1px solid #d1d5db;margin-top:8px}
+  .hint{font-size:12px;color:#374151;margin-top:6px;line-height:1.4}
+
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:16px}
+  .box{width:min(560px,100%);background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.2)}
+  .box h3{margin:0 0 8px;color:#111}
+  .box pre{white-space:pre-wrap;background:#f3f4f6;border:1px solid #e5e7eb;padding:10px;border-radius:12px;margin:10px 0;color:#111}
+
+  .vuWrap{
+    position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+    padding:18px;background:rgba(0,0,0,.88);z-index:999999;
+    backdrop-filter:blur(6px)
+  }
+  .vuBox{
+    width:min(460px,100%);position:relative;overflow:hidden;
+    background:linear-gradient(180deg,#111827,#0f172a);
+    color:#fff;border:1px solid rgba(255,255,255,.12);border-radius:22px;
+    padding:24px;box-shadow:0 20px 70px rgba(0,0,0,.45)
+  }
+  .vuGlow1,.vuGlow2{
+    position:absolute;border-radius:999px;filter:blur(28px);opacity:.45;pointer-events:none
+  }
+  .vuGlow1{width:180px;height:180px;top:-70px;right:-50px;background:#2563eb}
+  .vuGlow2{width:160px;height:160px;left:-50px;bottom:-70px;background:#22c55e}
+  .vuIcon{
+    width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#2563eb,#60a5fa);color:#fff;font-size:30px;font-weight:800;
+    box-shadow:0 10px 30px rgba(37,99,235,.28);margin-bottom:14px;position:relative;z-index:1
+  }
+  .vuTitle{margin:0 0 8px;color:#fff;font-size:26px;font-weight:800;position:relative;z-index:1}
+  .vuText{margin:0 0 16px;color:rgba(255,255,255,.88);font-size:14px;line-height:1.55;position:relative;z-index:1}
+  .vuTag{
+    display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+    color:#fff;font-size:12px;font-weight:700;margin-bottom:16px;position:relative;z-index:1
+  }
+  .vuBtn{
+    width:100%;padding:14px 16px;border-radius:14px;border:none;cursor:pointer;
+    background:linear-gradient(135deg,#2563eb,#60a5fa);color:#fff;font-size:16px;font-weight:800;
+    box-shadow:0 12px 30px rgba(37,99,235,.26);position:relative;z-index:1
+  }
+  .vuBtn:hover{filter:brightness(1.03)}
+  .vuNote{margin-top:10px;color:rgba(255,255,255,.72);font-size:12px;text-align:center;position:relative;z-index:1}
+</style>
+</head>
+<body>
+
+<div id="versionUpdateModal" class="vuWrap">
+  <div class="vuBox">
+    <div class="vuGlow1"></div>
+    <div class="vuGlow2"></div>
+    <div class="vuIcon">↻</div>
+    <h3 class="vuTitle">New Version Available</h3>
+    <p class="vuText">A new update is ready. Please update now to continue using the latest Customer Page.</p>
+    <div class="vuTag">Mandatory Update</div>
+    <button id="btnVersionUpdate" class="vuBtn" type="button">Update Now</button>
+    <div class="vuNote">The page will open only after update.</div>
+  </div>
+</div>
+
+<div id="appRoot" style="display:none;">
+<div class="wrap">
+ <div style="text-align:center;margin-bottom:2px;">
+  <img src="logo.png" alt="Logo" style="max-width:180px;height:auto;">
+</div>
+
+  <div class="card">
+    <div class="row">
+      <div>
+        <label>Service *</label>
+        <select id="service">
+          <option value="Solar Cleaning">Solar Cleaning</option>
+        </select>
+      </div>
+      <div>
+        <label>Date *</label>
+        <input id="date" type="date">
+      </div>
+    </div>
+
+    <div class="row">
+      <div><label>Name *</label><input id="name" placeholder="Customer name"></div>
+      <div>
+        <label>Mobile (10 digit) *</label>
+        <input id="phone" type="tel" maxlength="10" placeholder="10 digit mobile">
+      </div>
+    </div>
+
+    <label>Email (.com) *</label>
+    <input id="email" placeholder="example@gmail.com">
+
+  <!-- ✅ NEW: Plans + Unique 4-digit code -->
+<div class="row">
+  <div>
+    <label>Plans *</label>
+    <select id="plan">
+      <option value="">Select Plan</option>
+      <option value="Monthly">Monthly</option>
+      <option value="Yearly">Yearly</option>
+<option value="One Time">One Time</option>
+    </select>
+  </div>
+
+  <div>
+    <label>Unique Code (4 digit)</label>
+    <input id="custCode" inputmode="numeric" maxlength="4" placeholder="e.g. 1234">
+    <div class="hint"></div>
+  </div>
+</div>
+
+
+    <div class="row">
+      <div>
+        <label>Pincode (6 digit) *</label>
+        <input id="pincode" inputmode="numeric" maxlength="6" placeholder="e.g. 302015">
+        <div class="hint" id="pinHint">Pincode validate ho raha hai…</div>
+      </div>
+      <div>
+        <label>Address *</label>
+        <input id="address" placeholder="House no, Area, Landmark, Jaipur">
+      </div>
+    </div>
+
+    <label>Location Link (Google Maps) *</label>
+    <input id="locationLink" placeholder="Auto fill by button OR paste Google Maps link">
+    <button type="button" class="btn2" id="btnLoc">📍 Use my current location</button>
+    <button type="button" class="btn2" id="btnMap">🗺️ Open Map at my location</button>
+
+    <label>Additional Support ( Optional )</label>
+    <textarea id="problem" ></textarea>
+
+    <div id="slotWrap" style="display:none;">
+      <h3 style="margin:14px 0 6px;color:#111">Select Slot *</h3>
+      <div class="slots" id="slots"></div>
+    </div>
+
+    <button id="btn" disabled>✅ Confirm Booking</button>
+  </div>
+</div>
+
+<div class="modal" id="modal" onclick="if(event.target.id==='modal')closeModal()">
+  <div class="box">
+    <h3 id="mt">Message</h3>
+    <pre id="mb"></pre>
+    <button onclick="closeModal()">OK</button>
+  </div>
+</div>
+</div>
+
+<script>
+const VERSION_FILE = "version.json";
+const VERSION_KEY = "site_version_seen";
+
+const $ = (id)=>document.getElementById(id);
+
+function showVersionedApp(){
+  $("appRoot").style.display = "block";
+  document.body.style.overflow = "auto";
+}
+function showMandatoryVersionUpdate(latestVersion){
+  $("versionUpdateModal").style.display = "flex";
+  document.body.style.overflow = "hidden";
+
+  history.pushState(null, "", location.href);
+  window.addEventListener("popstate", function (){
+    history.pushState(null, "", location.href);
+    $("versionUpdateModal").style.display = "flex";
+    document.body.style.overflow = "hidden";
+  });
+
+  $("btnVersionUpdate").onclick = function (){
+    localStorage.setItem(VERSION_KEY, latestVersion || "");
+    location.replace(location.pathname + "?v=" + Date.now());
+  };
+}
+async function checkVersionBeforeOpen(){
+  try{
+    const res = await fetch(VERSION_FILE + "?t=" + Date.now(), { cache:"no-store" });
+    const data = await res.json();
+
+    const latestVersion = String(data.version || "").trim();
+    const seenVersion = localStorage.getItem(VERSION_KEY) || "";
+
+    if(!latestVersion){
+      showVersionedApp();
+      return;
+    }
+    if(!seenVersion){
+      localStorage.setItem(VERSION_KEY, latestVersion);
+      showVersionedApp();
+      return;
+    }
+    if(latestVersion !== seenVersion){
+      showMandatoryVersionUpdate(latestVersion);
+      return;
+    }
+    showVersionedApp();
+  }catch(e){
+    showVersionedApp();
+  }
+}
+
+const API_URL = "https://script.google.com/macros/s/AKfycby6J1PUZdgXAh-T7GVN5SJtw3lM_JeFUyDtj6Zk71ppOik-4wTkqW6zFyswwagNRs76UQ/exec";
+
+const START_HOUR = 9.5, END_HOUR = 19, LUNCH_START = 13.5, LUNCH_END = 14;
+let selectedSlot = "";
+let lastLat = null, lastLng = null;
+
+let ALLOWED_PINS = [];      // fetched from .gs
+let PIN_OK = false;
+
+function openModal(title, body){ $("mt").textContent = title; $("mb").textContent = body; $("modal").style.display="flex"; }
+function closeModal(){ $("modal").style.display="none"; }
+
+// validations
+function validPhone(p){ return /^[0-9]{10}$/.test(p); }
+function validEmail(email){ return /^[^\s@]+@[^\s@]+\.com$/i.test(email); }
+function validPincode(pin){ return /^[0-9]{6}$/.test(pin); }
+function validCode4(v){ return /^[0-9]{4}$/.test(v); }
+$("custCode").addEventListener("input", ()=>{
+  $("custCode").value = $("custCode").value.replace(/\D/g,"").slice(0,4);
+  updateBtn();
+});
+
+
+// slot helpers
+function pad2(n){ return String(n).padStart(2,"0"); }
+function fmt(h){
+  const hour = Math.floor(h);
+  const minute = (h % 1) ? 30 : 0;
+  const ampm = (hour + (minute/60)) >= 12 ? "PM" : "AM";
+  const hh = ((hour + 11) % 12) + 1;
+  return `${hh}:${minute===0?"00":"30"} ${ampm}`;
+}
+function slotLabel(h){ return `${fmt(h)} - ${fmt(h+0.5)}`; }
+function todayYMD(){ const now=new Date(); return `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`; }
+function isTodaySelected(){ return $("date").value === todayYMD(); }
+
+function renderSlots(){
+  const box=$("slots");
+  box.innerHTML=""; selectedSlot="";
+  const now=new Date();
+  const currentMinutes = now.getHours()*60 + now.getMinutes();
+  const today = isTodaySelected();
+
+  for(let h=START_HOUR; h<END_HOUR; h+=0.5){
+    if(h>=LUNCH_START && h<LUNCH_END) continue;
+
+    const slotEndMinutes = (h+0.5)*60;
+    const isPast = today && (currentMinutes >= slotEndMinutes);
+
+    const div=document.createElement("div");
+    div.className="slot";
+    div.textContent=slotLabel(h);
+
+    if(isPast){
+      div.classList.add("disabled");
+    } else {
+      div.onclick=()=>{
+        document.querySelectorAll("#slots .slot").forEach(x=>x.classList.remove("selected"));
+        div.classList.add("selected");
+        selectedSlot = div.textContent;
+        updateBtn();
+      };
+    }
+    box.appendChild(div);
+  }
+  updateBtn();
+}
+
+function toggleSlotVisibility(){
+  const isOneTime = $("plan").value.trim() === "One Time";
+  $("slotWrap").style.display = isOneTime ? "block" : "none";
+
+  if(!isOneTime){
+    selectedSlot = "";
+    document.querySelectorAll("#slots .slot").forEach(x=>x.classList.remove("selected"));
+  }
+
+  updateBtn();
+}
+
+function updatePinStatus(showPopupIfInvalid=false){
+  const pin = $("pincode").value.trim();
+  PIN_OK = false;
+
+  if(!validPincode(pin)){
+    $("pinHint").textContent = "";
+    $("pinHint").style.color = "#374151";
+    updateBtn();
+    return;
+  }
+
+  if(ALLOWED_PINS.length && !ALLOWED_PINS.includes(pin)){
+    $("pinHint").textContent = "Our services not available at this pincode.Please Contect on this number 9660019642";
+    $("pinHint").style.color = "#b91c1c";
+    if(showPopupIfInvalid){
+      openModal("❌ Service Not Available", "Our services not available at this pincode.Please Contect on this number 9660019642");
+    }
+    updateBtn();
+    return;
+  }
+
+  PIN_OK = true;
+  $("pinHint").textContent = "✅ Service available for this pincode.";
+  $("pinHint").style.color = "#047857";
+  updateBtn();
+}
+
+function updateBtn(){
+  const isOneTime = $("plan").value.trim() === "One Time";
+
+  const ok =
+    $("date").value &&
+    $("name").value.trim() &&
+    validPhone($("phone").value.trim()) &&
+    validEmail($("email").value.trim()) &&
+    $("plan").value.trim() &&
+    validCode4($("custCode").value.trim()) &&
+    validPincode($("pincode").value.trim()) &&
+    $("address").value.trim() &&
+    $("locationLink").value.trim() &&
+    (!isOneTime || selectedSlot);
+
+  $("btn").disabled = !ok;
+}
+
+
+function resetForm(){
+  $("service").value="Solar Cleaning";
+  $("name").value=""; $("phone").value="";
+  $("email").value="";
+
+ $("plan").value="";
+  $("custCode").value="";
+
+  $("pincode").value="";
+  $("address").value="";
+  $("locationLink").value="";
+  $("problem").value="";
+  selectedSlot="";
+  lastLat=null; lastLng=null;
+  PIN_OK=false;
+  document.querySelectorAll("#slots .slot").forEach(x=>x.classList.remove("selected"));
+  $("pinHint").textContent = (ALLOWED_PINS.length ? "6 digit pincode dalen." : "Pincode validate ho raha hai…");
+  $("pinHint").style.color = "#374151";
+  toggleSlotVisibility();
+  updateBtn();
+}
+
+// input sanitization
+$("phone").addEventListener("input", ()=>{ $("phone").value = $("phone").value.replace(/\D/g,"").slice(0,10); updateBtn(); });
+$("pincode").addEventListener("input", ()=>{
+  $("pincode").value = $("pincode").value.replace(/\D/g,"").slice(0,6);
+  updatePinStatus(false);
+});
+
+// When pincode field loses focus -> show popup if invalid
+$("pincode").addEventListener("blur", ()=> updatePinStatus(true));
+
+async function getCurrentCoords(){
+  return new Promise((resolve, reject)=>{
+    if(!navigator.geolocation) return reject(new Error("Geolocation not supported"));
+    navigator.geolocation.getCurrentPosition(
+      (pos)=>resolve({lat:pos.coords.latitude, lng:pos.coords.longitude}),
+      (err)=>reject(err),
+      { enableHighAccuracy:true, timeout:10000 }
+    );
+  });
+}
+
+// Use my current location -> auto fill link + save lat/lng
+$("btnLoc").addEventListener("click", async ()=>{
+  try{
+    $("btnLoc").disabled = true;
+    $("btnLoc").textContent = "📍 Getting location...";
+    const {lat, lng} = await getCurrentCoords();
+    lastLat = lat; lastLng = lng;
+    $("locationLink").value = `https://www.google.com/maps?q=${lat},${lng}`;
+    openModal("✅ Location Added", "Location link auto fill ho gaya.(The location link has been auto-filled.)");
+  }catch(e){
+    openModal("❌ Location Error", "Location allow nahi hua.\nPlease GPS allow karo ya link paste karo.\n\n" + (e?.message || e));
+  }finally{
+    $("btnLoc").disabled = false;
+    $("btnLoc").textContent = "📍 Use my current location";
+    updateBtn();
+  }
+});
+
+// Map picker -> DIRECT current location par open
+$("btnMap").addEventListener("click", async ()=>{
+  try{
+    $("btnMap").disabled = true;
+    $("btnMap").textContent = "🗺️ Opening map...";
+    if(lastLat===null || lastLng===null){
+      const {lat, lng} = await getCurrentCoords();
+      lastLat = lat; lastLng = lng;
+      if(!$("locationLink").value.trim()){
+        $("locationLink").value = `https://www.google.com/maps?q=${lat},${lng}`;
+      }
+    }
+    window.open(`https://www.google.com/maps/@${lastLat},${lastLng},18z`, "_blank");
+  }catch(e){
+    openModal("❌ Map Error", "Map open nahi hua.\nGPS allow karo ya link paste karo.\n\n" + (e?.message || e));
+  }finally{
+    $("btnMap").disabled = false;
+    $("btnMap").textContent = "🗺️ Open Map at my location";
+    updateBtn();
+  }
+});
+
+// fetch allowed pincodes from .gs
+async function loadAllowedPincodes(){
+  try{
+    const res = await fetch(API_URL + "?action=pincodes&t=" + Date.now(), {
+  method: "GET",
+  cache: "no-store"
+});
+    const txt = await res.text();
+    const out = JSON.parse(txt);
+    if(out && out.ok && Array.isArray(out.pincodes)){
+      ALLOWED_PINS = out.pincodes.map(String);
+      $("pinHint").textContent = "6 digit pincode dalen.";
+      $("pinHint").style.color = "#374151";
+      updatePinStatus(false);
+    }else{
+      $("pinHint").textContent = "Pincode list load nahi hui. Admin se contact karein.";
+      $("pinHint").style.color = "#b91c1c";
+    }
+  }catch(e){
+    $("pinHint").textContent = "Pincode list load nahi hui. Internet / API_URL check karein.";
+    $("pinHint").style.color = "#b91c1c";
+  }
+}
+
+$("btn").onclick = async ()=>{
+  try{
+    // final pin check before submit
+    updatePinStatus(true);
+    if(!PIN_OK){
+      updateBtn();
+      return;
+    }
+
+    $("btn").disabled = true;
+
+   const payload = {
+  action:"create",
+  service:$("service").value,
+  date:$("date").value,
+  slot:$("plan").value.trim() === "One Time" ? selectedSlot : "",
+  name:$("name").value.trim(),
+  phone:$("phone").value.trim(),
+  email:$("email").value.trim(),
+
+  plan:$("plan").value.trim(),                 // ✅ NEW
+  customerCode:$("custCode").value.trim(),     // ✅ NEW
+
+  pincode:$("pincode").value.trim(),
+  address:$("address").value.trim(),
+  locationLink:$("locationLink").value.trim(),
+  lat:lastLat===null ? "" : String(lastLat),
+  lng:lastLng===null ? "" : String(lastLng),
+  problem:$("problem").value.trim() // optional
+};
+
+
+    const res = await fetch(API_URL, {
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(payload)
+    });
+
+    const txt = await res.text();
+    let out;
+    try{ out = JSON.parse(txt); } catch(e){ throw new Error("Non-JSON response:\n"+txt.slice(0,250)); }
+
+    if(out && out.ok){
+      openModal(
+  "✅ Booking Saved",
+  "Booking ID: " + out.bookingId
+);      resetForm();
+      renderSlots();
+    }else{
+      openModal("❌ Error", out?.error || "Failed");
+      updateBtn();
+    }
+  }catch(e){
+    openModal("❌ Error", String(e));
+    updateBtn();
+  }
+};
+
+(async function init(){
+  await checkVersionBeforeOpen();
+  const now = new Date();
+  now.setDate(now.getDate()+1);
+
+  const t = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
+  $("date").min = t;
+  $("date").value = t;
+
+  renderSlots();
+  toggleSlotVisibility();
+  ["service","name","email","address","locationLink","problem","pincode","plan","custCode"]
+  .forEach(id=>{
+    $(id).addEventListener("input", updateBtn);
+    $(id).addEventListener("change", updateBtn);
+  });
+  $("plan").addEventListener("change", toggleSlotVisibility);
+  $("date").addEventListener("change", ()=>renderSlots());
+  setInterval(()=>{ if(isTodaySelected()) renderSlots(); }, 60000);
+
+  loadAllowedPincodes();
+})();
+</script>
+</body>
+</html>
