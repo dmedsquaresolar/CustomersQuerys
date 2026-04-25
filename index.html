@@ -634,22 +634,6 @@ function payThenCreateBooking(payload){
   paylater: false,
   emi: false
 },
-config: {
-  display: {
-    blocks: {
-      upi: {
-        name: "UPI Payment",
-        instruments: [
-          { method: "upi" }
-        ]
-      }
-    },
-    sequence: ["block.upi"],
-    preferences: {
-      show_default_blocks: false
-    }
-  }
-},
         handler: async function(response){
           try{
             payload.razorpay_payment_id = response.razorpay_payment_id;
