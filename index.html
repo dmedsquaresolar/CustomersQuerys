@@ -194,6 +194,9 @@ const VERSION_KEY = "site_version_seen";
 
 const $ = (id)=>document.getElementById(id);
 
+/* ✅ NEW LINE ADDED */
+const ESTIMATE_PAGE_URL = "https://dmedsquaresolar.github.io/estimate/";
+
 function showVersionedApp(){
   $("appRoot").style.display = "block";
   document.body.style.overflow = "auto";
@@ -520,7 +523,13 @@ $("btnMap").addEventListener("click", async ()=>{
 });
 
 
-$("plan").addEventListener("change", updatePaymentBox);
+$("plan").addEventListener("change", () => {
+  if ($("plan").value === "One Time") {
+    window.location.href = ESTIMATE_PAGE_URL;
+    return;
+  }
+  updatePaymentBox();
+});
 $("payNowBtn").addEventListener("click", ()=>{
   if(!REQUIRED_AMOUNT || REQUIRED_AMOUNT <= 0){
     openModal("❌ Amount Missing", "Estimate page se One-time BOOK NOW par click karke aaiye, taki amount auto-fill ho sake.");
