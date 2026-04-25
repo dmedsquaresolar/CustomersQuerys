@@ -74,9 +74,8 @@
   .verifyStatus{font-size:13px;font-weight:800;margin-top:8px;line-height:1.4}
   .okText{color:#047857}.badText{color:#b91c1c}.warnText{color:#92400e}
 
-  #paymentShot{display:none!important}
 </style>
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -146,10 +145,14 @@
 
     <div class="paymentBox" id="paymentBox">
       <b>One-time Service Payment</b>
-      <div class="hint">Confirm Booking click karne par pehle Razorpay UPI popup open hoga. Payment success ke baad hi booking confirm hogi.</div>
+      <div class="hint"></div>
       <div class="payAmount">Amount: <span id="payAmountText">₹0</span></div>
-      <button type="button" class="payBtn" id="payNowBtn">💳 Payment will open on Confirm Booking</button>
-      <div class="verifyStatus okText" id="verifyStatus">Screenshot upload required nahi hai.</div>
+      <img id="upiQr" class="qrImg" src="scanner.png" alt="UPI Scanner / QR Code" onerror="this.style.display='none'">
+      <button type="button" class="payBtn" id="payNowBtn">💳 Pay Now via UPI</button>
+      <label>Payment Screenshot Upload *</label>
+      <input id="paymentShot" type="file" accept="image/*">
+      <div class="verifyStatus warnText" id="verifyStatus">Please Upload Payment screenshot.</div>
+      <div class="hint"></div>
     </div>
 
     <div class="row">
@@ -239,7 +242,6 @@ async function checkVersionBeforeOpen(){
 }
 
 const API_URL = "https://script.google.com/macros/s/AKfycby6J1PUZdgXAh-T7GVN5SJtw3lM_JeFUyDtj6Zk71ppOik-4wTkqW6zFyswwagNRs76UQ/exec";
-const ESTIMATE_PAGE_URL_FOR_ONE_TIME = "https://dmedsquaresolar.github.io/estimate/";
 
 // CHANGE THESE TWO VALUES
 const UPI_ID = "nimaaygroup@sbi";      // example: cleensol@oksbi
@@ -282,22 +284,32 @@ function setupEstimatePrefill(){
   const name = getQueryParam("name");
   const mobile = getQueryParam("mobile");
   const allowOneTime = getQueryParam("allowOneTime");
+
   const planSelect = $("plan");
 
+  // AMC BOOK NOW se aaye customer ke liye One Time option remove hoga.
   if(allowOneTime === "0"){
-    Array.from(planSelect.options).forEach(opt=>{ if(opt.value === "One Time") opt.remove(); });
+    Array.from(planSelect.options).forEach(opt => {
+      if(opt.value === "One Time") opt.remove();
+    });
   }
 
-  if(allowOneTime === "1" || (plan === "One Time" && REQUIRED_AMOUNT > 0)){
-    Array.from(planSelect.options).forEach(opt=>{
+  // One-time BOOK NOW se aaye customer ke liye Monthly/Yearly option remove hoga.
+  if(allowOneTime === "1" || plan === "One Time"){
+    Array.from(planSelect.options).forEach(opt => {
       if(opt.value === "Monthly" || opt.value === "Yearly" || opt.value === "") opt.remove();
     });
     planSelect.value = "One Time";
     planSelect.disabled = true;
     planSelect.style.backgroundColor = "#f3f4f6";
-  }else if(plan && plan !== "One Time"){
-    const hasPlan = Array.from(planSelect.options).some(o=>o.value === plan);
+  }else if(plan){
+    const hasPlan = Array.from(planSelect.options).some(o => o.value === plan);
     planSelect.value = hasPlan ? plan : "Yearly";
+  }
+
+  // Extra safety: AMC link se aaye to One Time select nahi rahega.
+  if(allowOneTime === "0" && planSelect.value === "One Time"){
+    planSelect.value = "Yearly";
   }
 
   if(name) $("name").value = decodeURIComponent(name);
@@ -305,31 +317,12 @@ function setupEstimatePrefill(){
   $("payAmountText").textContent = money(REQUIRED_AMOUNT);
   updatePaymentBox();
 }
-
-function goToEstimateForOneTime(){
-  const q = new URLSearchParams({
-    fromCustomer:"1",
-    name:$("name").value.trim(),
-    mobile:$("phone").value.trim()
-  });
-  window.location.href = ESTIMATE_PAGE_URL_FOR_ONE_TIME + "?" + q.toString();
-}
 function updatePaymentBox(){
   const isOneTime = $("plan").value === "One Time";
   $("paymentBox").style.display = isOneTime ? "block" : "none";
-
-  if(isOneTime && REQUIRED_AMOUNT > 0){
-    PAYMENT_VERIFIED = true;
-    $("verifyStatus").className = "verifyStatus okText";
-    $("verifyStatus").textContent = "Amount ready hai. Confirm Booking par pehle Razorpay UPI payment hoga.";
-  }else if(isOneTime){
-    PAYMENT_VERIFIED = false;
-    $("verifyStatus").className = "verifyStatus warnText";
-    $("verifyStatus").textContent = "One Time ke liye pehle estimate generate karna zaroori hai.";
-  }else{
+  if(!isOneTime){
     PAYMENT_VERIFIED = false;
   }
-
   updateBtn();
 }
 function buildUpiLink(){
@@ -429,7 +422,7 @@ function updateBtn(){
     validPincode($("pincode").value.trim()) &&
     $("address").value.trim() &&
     $("locationLink").value.trim() &&
-    ($("plan").value !== "One Time" || REQUIRED_AMOUNT > 0);
+    ($("plan").value !== "One Time" || (REQUIRED_AMOUNT > 0 && PAYMENT_VERIFIED));
 
   $("btn").disabled = !ok;
 }
@@ -527,22 +520,15 @@ $("btnMap").addEventListener("click", async ()=>{
 });
 
 
-$("plan").addEventListener("change", ()=>{
-  if($("plan").value === "One Time" && REQUIRED_AMOUNT <= 0){
-    openModal("Estimate Required", "One Time plan ke liye pehle estimate generate karna zaroori hai. Ab estimate page open ho raha hai.");
-    setTimeout(goToEstimateForOneTime, 700);
-    return;
-  }
-  updatePaymentBox();
-});
-
+$("plan").addEventListener("change", updatePaymentBox);
 $("payNowBtn").addEventListener("click", ()=>{
-  if($("plan").value === "One Time" && REQUIRED_AMOUNT <= 0){
-    goToEstimateForOneTime();
+  if(!REQUIRED_AMOUNT || REQUIRED_AMOUNT <= 0){
+    openModal("❌ Amount Missing", "Estimate page se One-time BOOK NOW par click karke aaiye, taki amount auto-fill ho sake.");
     return;
   }
-  openModal("Payment", "Payment ke liye form complete karke Confirm Booking click karein.");
+  window.location.href = buildUpiLink();
 });
+$("paymentShot").addEventListener("change", (e)=> verifyPaymentScreenshot(e.target.files && e.target.files[0]));
 
 // fetch allowed pincodes from .gs
 async function loadAllowedPincodes(){
@@ -566,111 +552,6 @@ async function loadAllowedPincodes(){
     $("pinHint").textContent = "Pincode list load nahi hui. Internet / API_URL check karein.";
     $("pinHint").style.color = "#b91c1c";
   }
-}
-
-
-function collectBookingPayload(){
-  return {
-    action:"create",
-    service:$("service").value,
-    date:$("date").value,
-    slot:"",
-    name:$("name").value.trim(),
-    phone:$("phone").value.trim(),
-    email:$("email").value.trim(),
-    plan:$("plan").value.trim(),
-    customerCode:$("custCode").value.trim(),
-    pincode:$("pincode").value.trim(),
-    address:$("address").value.trim(),
-    locationLink:$("locationLink").value.trim(),
-    lat:lastLat===null ? "" : String(lastLat),
-    lng:lastLng===null ? "" : String(lastLng),
-    problem:$("problem").value.trim(),
-    paymentAmount:$("plan").value === "One Time" ? String(REQUIRED_AMOUNT) : "",
-    amount:$("plan").value === "One Time" ? String(REQUIRED_AMOUNT) : "",
-    paymentMode:$("plan").value === "One Time" ? "RAZORPAY_CHECKOUT_UPI" : ""
-  };
-}
-
-async function createRazorpayOrderForPayment(payload){
-  const res = await fetch(API_URL, {
-    method:"POST",
-    headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body:JSON.stringify({
-      action:"createRazorpayOrder",
-      amount: payload.paymentAmount,
-      name: payload.name,
-      phone: payload.phone,
-      email: payload.email
-    })
-  });
-  const out = await res.json();
-  if(!out || !out.ok) throw new Error(out && out.error ? out.error : "Razorpay order failed");
-  return out;
-}
-
-function payThenCreateBooking(payload){
-  return new Promise(async (resolve, reject)=>{
-    try{
-      const order = await createRazorpayOrderForPayment(payload);
-
-      const options = {
-        key: order.razorpayKeyId,
-        amount: order.amount,
-        currency: "INR",
-        name: "Nimaay Business Solution LLP",
-        description: "Solar Cleaning One-time Service",
-        order_id: order.razorpayOrderId,
-        prefill: {
-          name: payload.name,
-          email: payload.email,
-          contact: payload.phone
-        },
-        method: {
-  upi: true,
-  card: true,
-  netbanking: false,
-  wallet: false,
-  paylater: false,
-  emi: false
-},
-        handler: async function(response){
-          try{
-            payload.razorpay_payment_id = response.razorpay_payment_id;
-            payload.razorpay_order_id = response.razorpay_order_id;
-            payload.razorpay_signature = response.razorpay_signature;
-            payload.paymentStatus = "DONE";
-            payload.paymentVerified = "YES";
-
-            const saveRes = await fetch(API_URL, {
-              method:"POST",
-              headers:{"Content-Type":"text/plain;charset=utf-8"},
-              body:JSON.stringify(payload)
-            });
-            const saveOut = await saveRes.json();
-            if(saveOut && saveOut.ok){
-              resolve(saveOut);
-            }else{
-              reject(new Error(saveOut && saveOut.error ? saveOut.error : "Booking save failed after payment"));
-            }
-          }catch(e){
-            reject(e);
-          }
-        },
-        modal: {
-          ondismiss: function(){
-            reject(new Error("Payment cancel ho gaya. Booking confirm nahi hui."));
-          }
-        },
-        theme: { color: "#f6c10a" }
-      };
-
-      const rzp = new Razorpay(options);
-      rzp.open();
-    }catch(e){
-      reject(e);
-    }
-  });
 }
 
 $("btn").onclick = async ()=>{
@@ -699,25 +580,13 @@ $("btn").onclick = async ()=>{
       lat:lastLat===null ? "" : String(lastLat),
       lng:lastLng===null ? "" : String(lastLng),
       problem:$("problem").value.trim(),
-      paymentRequired: "No",
+      paymentRequired: $("plan").value === "One Time" ? "Yes" : "No",
       paymentAmount: $("plan").value === "One Time" ? String(REQUIRED_AMOUNT) : "",
-      amount: $("plan").value === "One Time" ? String(REQUIRED_AMOUNT) : "",
-      paymentMode: $("plan").value === "One Time" ? "RAZORPAY_CHECKOUT_UPI" : ""
+      paymentUpiId: $("plan").value === "One Time" ? UPI_ID : "",
+      paymentVerified: $("plan").value === "One Time" ? String(PAYMENT_VERIFIED) : "",
+      paymentOcrText: $("plan").value === "One Time" ? PAYMENT_OCR_TEXT : "",
+      paymentScreenshotBase64: $("plan").value === "One Time" ? PAYMENT_SCREENSHOT_BASE64 : ""
     };
-
-    if($("plan").value === "One Time"){
-      try{
-        $("btn").disabled = true;
-        const out = await payThenCreateBooking(payload);
-        openModal("✅ Payment Done & Booking Confirmed", "Booking ID: " + out.bookingId);
-        resetForm();
-      }catch(e){
-        openModal("❌ Payment / Booking Error", String(e.message || e));
-        updateBtn();
-      }
-      return;
-    }
-
 
     const res = await fetch(API_URL, {
       method:"POST",
