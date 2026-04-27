@@ -328,10 +328,25 @@ function updatePaymentBox(){
   }
   updateBtn();
 }
-function buildUpiLink(){
+function buildUpiQuery_(){
   const amount = REQUIRED_AMOUNT || 0;
   const tn = encodeURIComponent("One Time Solar Cleaning Service");
-  return `upi://pay?pa=${encodeURIComponent(UPI_ID)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount.toFixed(2))}&cu=INR&tn=${tn}`;
+  return `pa=${encodeURIComponent(UPI_ID)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount.toFixed(2))}&cu=INR&tn=${tn}`;
+}
+function buildUpiAppIntent_(packageName){
+  return `intent://pay?${buildUpiQuery_()}#Intent;scheme=upi;package=${packageName};end`;
+}
+function openUpiApps_(){
+  const phonePeIntent = buildUpiAppIntent_("com.phonepe.app");
+  const gpayIntent = buildUpiAppIntent_("com.google.android.apps.nbu.paisa.user");
+
+  // Generic upi:// link WhatsApp Pay bhi open kar sakta hai, isliye use intentionally avoid kiya hai.
+  window.location.href = phonePeIntent;
+
+  // Agar PhonePe install nahi hai / open nahi hua, to Google Pay try hoga.
+  setTimeout(()=>{
+    window.location.href = gpayIntent;
+  }, 900);
 }
 function normalizeOcrText(t){ return (t || "").toLowerCase().replace(/[,₹\s]/g, ""); }
 function screenshotLooksPaid(ocrText){
@@ -542,16 +557,7 @@ $("payNowBtn").addEventListener("click", ()=>{
     openModal("❌ Amount Missing", "Estimate page se One-time BOOK NOW par click karke aaiye, taki amount auto-fill ho sake.");
     return;
   }
-
-  const upiLink = buildUpiLink();
-
-  // PhonePe / Google Pay / Paytm / UPI app open karne ke liye
-  window.open(upiLink, "_blank");
-
-  // fallback: kuch mobile browsers me popup block ho to same tab me open karega
-  setTimeout(()=>{
-    window.location.href = upiLink;
-  }, 500);
+  openUpiApps_();
 });
 $("paymentShot").addEventListener("change", (e)=> verifyPaymentScreenshot(e.target.files && e.target.files[0]));
 
