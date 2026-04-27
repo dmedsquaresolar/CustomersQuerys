@@ -542,7 +542,16 @@ $("payNowBtn").addEventListener("click", ()=>{
     openModal("❌ Amount Missing", "Estimate page se One-time BOOK NOW par click karke aaiye, taki amount auto-fill ho sake.");
     return;
   }
-  window.location.href = buildUpiLink();
+
+  const upiLink = buildUpiLink();
+
+  // PhonePe / Google Pay / Paytm / UPI app open karne ke liye
+  window.open(upiLink, "_blank");
+
+  // fallback: kuch mobile browsers me popup block ho to same tab me open karega
+  setTimeout(()=>{
+    window.location.href = upiLink;
+  }, 500);
 });
 $("paymentShot").addEventListener("change", (e)=> verifyPaymentScreenshot(e.target.files && e.target.files[0]));
 
