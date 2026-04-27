@@ -74,6 +74,17 @@
   .verifyStatus{font-size:13px;font-weight:800;margin-top:8px;line-height:1.4}
   .okText{color:#047857}.badText{color:#b91c1c}.warnText{color:#92400e}
 
+
+  .upiAppModal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:999999}
+  .upiAppBox{width:min(420px,100%);background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 35px rgba(0,0,0,.25);color:#111}
+  .upiAppBox h3{margin:0 0 8px;font-size:20px;color:#111}
+  .upiAppText{font-size:13px;color:#374151;line-height:1.45;margin:0 0 12px}
+  .upiAppBtn{width:100%;border:none;border-radius:12px;padding:13px 14px;margin-top:9px;font-size:15px;font-weight:800;cursor:pointer;color:#fff;background:#16a34a}
+  .upiAppBtn.phonepe{background:#5f259f}
+  .upiAppBtn.gpay{background:#1a73e8}
+  .upiAppBtn.upi{background:#16a34a}
+  .upiAppClose{width:100%;border:1px solid #d1d5db;border-radius:12px;padding:12px 14px;margin-top:10px;font-size:14px;font-weight:800;cursor:pointer;color:#111;background:#f3f4f6}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
@@ -176,6 +187,19 @@
     <textarea id="problem"></textarea>
 
     <button id="btn" disabled>✅ Confirm Booking</button>
+  </div>
+</div>
+
+
+
+<div class="upiAppModal" id="upiAppModal" onclick="if(event.target.id==='upiAppModal')closeUpiAppModal()">
+  <div class="upiAppBox">
+    <h3>Select UPI App</h3>
+    <p class="upiAppText">PhonePe ya Google Pay se payment karne ke liye niche app choose karein. Agar app open na ho to QR scan karke payment karein.</p>
+    <button type="button" class="upiAppBtn phonepe" id="openPhonePeBtn">Open PhonePe</button>
+    <button type="button" class="upiAppBtn gpay" id="openGPayBtn">Open Google Pay</button>
+    <button type="button" class="upiAppBtn upi" id="openAnyUpiBtn">Open Any UPI App</button>
+    <button type="button" class="upiAppClose" onclick="closeUpiAppModal()">Cancel</button>
   </div>
 </div>
 
@@ -328,25 +352,41 @@ function updatePaymentBox(){
   }
   updateBtn();
 }
-function buildUpiQuery_(){
+function buildUpiLink(){
   const amount = REQUIRED_AMOUNT || 0;
   const tn = encodeURIComponent("One Time Solar Cleaning Service");
-  return `pa=${encodeURIComponent(UPI_ID)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount.toFixed(2))}&cu=INR&tn=${tn}`;
+  return `upi://pay?pa=${encodeURIComponent(UPI_ID)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount.toFixed(2))}&cu=INR&tn=${tn}`;
 }
-function buildUpiAppIntent_(packageName){
-  return `intent://pay?${buildUpiQuery_()}#Intent;scheme=upi;package=${packageName};end`;
+
+function buildUpiParams(){
+  const amount = REQUIRED_AMOUNT || 0;
+  const tn = "One Time Solar Cleaning Service";
+  return `pa=${encodeURIComponent(UPI_ID)}&pn=${encodeURIComponent(UPI_NAME)}&am=${encodeURIComponent(amount.toFixed(2))}&cu=INR&tn=${encodeURIComponent(tn)}`;
 }
-function openUpiApps_(){
-  const phonePeIntent = buildUpiAppIntent_("com.phonepe.app");
-  const gpayIntent = buildUpiAppIntent_("com.google.android.apps.nbu.paisa.user");
-
-  // Generic upi:// link WhatsApp Pay bhi open kar sakta hai, isliye use intentionally avoid kiya hai.
-  window.location.href = phonePeIntent;
-
-  // Agar PhonePe install nahi hai / open nahi hua, to Google Pay try hoga.
-  setTimeout(()=>{
-    window.location.href = gpayIntent;
-  }, 900);
+function openUpiAppModal(){
+  if(!REQUIRED_AMOUNT || REQUIRED_AMOUNT <= 0){
+    openModal("❌ Amount Missing", "Estimate page se One-time BOOK NOW par click karke aaiye, taki amount auto-fill ho sake.");
+    return;
+  }
+  $("upiAppModal").style.display = "flex";
+}
+function closeUpiAppModal(){
+  $("upiAppModal").style.display = "none";
+}
+function openPaymentLink_(url){
+  // Direct user-click based open: no auto retry, so iPhone repeated-open error nahi aayega.
+  window.location.href = url;
+}
+function openPhonePePayment(){
+  const params = buildUpiParams();
+  openPaymentLink_("phonepe://pay?" + params);
+}
+function openGPayPayment(){
+  const params = buildUpiParams();
+  openPaymentLink_("tez://upi/pay?" + params);
+}
+function openAnyUpiPayment(){
+  openPaymentLink_(buildUpiLink());
 }
 function normalizeOcrText(t){ return (t || "").toLowerCase().replace(/[,₹\s]/g, ""); }
 function screenshotLooksPaid(ocrText){
@@ -552,13 +592,10 @@ $("plan").addEventListener("change", () => {
   }
   updatePaymentBox();
 });
-$("payNowBtn").addEventListener("click", ()=>{
-  if(!REQUIRED_AMOUNT || REQUIRED_AMOUNT <= 0){
-    openModal("❌ Amount Missing", "Estimate page se One-time BOOK NOW par click karke aaiye, taki amount auto-fill ho sake.");
-    return;
-  }
-  openUpiApps_();
-});
+$("payNowBtn").addEventListener("click", openUpiAppModal);
+$("openPhonePeBtn").addEventListener("click", openPhonePePayment);
+$("openGPayBtn").addEventListener("click", openGPayPayment);
+$("openAnyUpiBtn").addEventListener("click", openAnyUpiPayment);
 $("paymentShot").addEventListener("change", (e)=> verifyPaymentScreenshot(e.target.files && e.target.files[0]));
 
 // fetch allowed pincodes from .gs
