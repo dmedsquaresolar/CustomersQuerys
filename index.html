@@ -525,7 +525,14 @@ $("btnMap").addEventListener("click", async ()=>{
 
 $("plan").addEventListener("change", () => {
   if ($("plan").value === "One Time") {
-    window.location.href = ESTIMATE_PAGE_URL;
+    const q = new URLSearchParams({
+      source: "booking",
+      bookingFlow: "1",
+      plan: "One Time",
+      name: $("name").value.trim(),
+      mobile: $("phone").value.trim()
+    });
+    window.location.href = ESTIMATE_PAGE_URL + "?" + q.toString();
     return;
   }
   updatePaymentBox();
