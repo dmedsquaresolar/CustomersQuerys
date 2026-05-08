@@ -152,6 +152,40 @@
       </div>
     </div>
 
+    <div id="servicePlanWrap" style="display:none;">
+      <div class="row">
+        <div id="servicesPerMonthBox">
+          <label>Total Services in One Month *</label>
+          <select id="servicesPerMonth">
+            <option value="">Select Services</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+          </select>
+          <div class="hint">Monthly: services/month × selected months. Yearly: services/month × 12.</div>
+        </div>
+
+        <div id="serviceMonthsBox" style="display:none;">
+          <label>Kitne Month Tak Services Chahiye? *</label>
+          <select id="serviceMonths">
+            <option value="">Select Months</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6">6</option>
+            <option value="7">7</option>
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+          </select>
+        </div>
+      </div>
+      <div class="hint" id="totalServicesHint"></div>
+    </div>
+
 
 
     <div class="paymentBox" id="paymentBox">
@@ -350,7 +384,45 @@ function updatePaymentBox(){
   if(!isOneTime){
     PAYMENT_VERIFIED = false;
   }
+  updateServicePlanFields();
   updateBtn();
+}
+
+function getServicePlanValues(){
+  const plan = $("plan").value;
+  const servicesPerMonth = parseInt($("servicesPerMonth")?.value || "0", 10);
+  const serviceMonths = plan === "Yearly" ? 12 : parseInt($("serviceMonths")?.value || "0", 10);
+  const totalServices = servicesPerMonth > 0 && serviceMonths > 0 ? servicesPerMonth * serviceMonths : 0;
+  return { servicesPerMonth, serviceMonths, totalServices };
+}
+
+function updateServicePlanFields(){
+  const plan = $("plan").value;
+  const showServiceOptions = (plan === "Monthly" || plan === "Yearly");
+  $("servicePlanWrap").style.display = showServiceOptions ? "block" : "none";
+  $("serviceMonthsBox").style.display = plan === "Monthly" ? "block" : "none";
+
+  if(!showServiceOptions){
+    $("servicesPerMonth").value = "";
+    $("serviceMonths").value = "";
+    $("totalServicesHint").textContent = "";
+    return;
+  }
+
+  if(plan === "Yearly"){
+    $("serviceMonths").value = "";
+  }
+
+  const v = getServicePlanValues();
+  if(v.totalServices > 0){
+    $("totalServicesHint").textContent = `Total Services: ${v.servicesPerMonth} × ${v.serviceMonths} = ${v.totalServices}`;
+    $("totalServicesHint").style.color = "#047857";
+  }else{
+    $("totalServicesHint").textContent = plan === "Yearly"
+      ? "Please select total services in one month."
+      : "Please select total services in one month and number of months.";
+    $("totalServicesHint").style.color = "#374151";
+  }
 }
 function buildUpiLink(){
   const amount = REQUIRED_AMOUNT || 0;
@@ -470,17 +542,24 @@ function updatePinStatus(showPopupIfInvalid=false){
 }
 
 function updateBtn(){
+  const plan = $("plan").value.trim();
+  const servicePlan = getServicePlanValues();
+  const servicePlanOk =
+    (plan !== "Monthly" && plan !== "Yearly") ||
+    (servicePlan.servicesPerMonth >= 1 && servicePlan.servicesPerMonth <= 3 && servicePlan.serviceMonths >= 1 && servicePlan.totalServices > 0);
+
   const ok =
     $("date").value &&
     $("name").value.trim() &&
     validPhone($("phone").value.trim()) &&
     validEmail($("email").value.trim()) &&
-    $("plan").value.trim() &&
+    plan &&
+    servicePlanOk &&
     validCode4($("custCode").value.trim()) &&
     validPincode($("pincode").value.trim()) &&
     $("address").value.trim() &&
     $("locationLink").value.trim() &&
-    ($("plan").value !== "One Time" || (REQUIRED_AMOUNT > 0 && PAYMENT_VERIFIED));
+    (plan !== "One Time" || (REQUIRED_AMOUNT > 0 && PAYMENT_VERIFIED));
 
   $("btn").disabled = !ok;
 }
@@ -491,6 +570,9 @@ function resetForm(){
   $("phone").value="";
   $("email").value="";
   $("plan").value="";
+  $("servicesPerMonth").value="";
+  $("serviceMonths").value="";
+  updateServicePlanFields();
   $("custCode").value="";
   $("pincode").value="";
   $("address").value="";
@@ -579,6 +661,7 @@ $("btnMap").addEventListener("click", async ()=>{
 
 
 $("plan").addEventListener("change", () => {
+  updateServicePlanFields();
   if ($("plan").value === "One Time") {
     const q = new URLSearchParams({
       source: "booking",
@@ -648,6 +731,9 @@ $("btn").onclick = async ()=>{
       lat:lastLat===null ? "" : String(lastLat),
       lng:lastLng===null ? "" : String(lastLng),
       problem:$("problem").value.trim(),
+      servicesPerMonth: getServicePlanValues().servicesPerMonth || "",
+      serviceMonths: getServicePlanValues().serviceMonths || "",
+      totalServices: getServicePlanValues().totalServices || "",
       paymentRequired: $("plan").value === "One Time" ? "Yes" : "No",
       paymentAmount: $("plan").value === "One Time" ? String(REQUIRED_AMOUNT) : "",
       paymentUpiId: $("plan").value === "One Time" ? UPI_ID : "",
@@ -692,11 +778,19 @@ $("btn").onclick = async ()=>{
   $("date").min = t;
   $("date").value = t;
   setupEstimatePrefill();
+  updateServicePlanFields();
 
-  ["service","name","email","address","locationLink","problem","pincode","plan","custCode","date"]
+  ["service","name","email","address","locationLink","problem","pincode","custCode","date"]
   .forEach(id=>{
     $(id).addEventListener("input", updateBtn);
     $(id).addEventListener("change", updateBtn);
+  });
+
+  // Plan / service-count / month change hote hi Total Services turant update hoga.
+  ["plan","servicesPerMonth","serviceMonths"]
+  .forEach(id=>{
+    $(id).addEventListener("input", () => { updateServicePlanFields(); updatePaymentBox(); });
+    $(id).addEventListener("change", () => { updateServicePlanFields(); updatePaymentBox(); });
   });
 
   loadAllowedPincodes();
