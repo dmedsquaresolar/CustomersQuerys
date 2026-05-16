@@ -85,6 +85,71 @@
   .upiAppBtn.upi{background:#16a34a}
   .upiAppClose{width:100%;border:1px solid #d1d5db;border-radius:12px;padding:12px 14px;margin-top:10px;font-size:14px;font-weight:800;cursor:pointer;color:#111;background:#f3f4f6}
 
+  .bookingSubmitWrap{
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    background:rgba(0,0,0,.62);
+    z-index:1000000;
+    backdrop-filter:blur(6px);
+  }
+  .bookingSubmitBox{
+    width:min(380px,100%);
+    background:#fff;
+    color:#111;
+    border-radius:22px;
+    padding:26px 22px;
+    text-align:center;
+    box-shadow:0 20px 70px rgba(0,0,0,.38);
+    border:1px solid rgba(255,255,255,.35);
+  }
+  .bookingSubmitSpinner{
+    width:70px;
+    height:70px;
+    margin:0 auto 16px;
+    border-radius:50%;
+    border:7px solid #e5e7eb;
+    border-top-color:#2563eb;
+    animation:bookingSpin .85s linear infinite;
+  }
+  .bookingSubmitTitle{
+    margin:0 0 6px;
+    color:#111;
+    font-size:24px;
+    font-weight:900;
+  }
+  .bookingSubmitText{
+    margin:0;
+    color:#374151;
+    font-size:14px;
+    line-height:1.45;
+    font-weight:700;
+  }
+  .bookingSubmitDots{
+    display:flex;
+    gap:7px;
+    justify-content:center;
+    margin-top:16px;
+  }
+  .bookingSubmitDots span{
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:#2563eb;
+    display:block;
+    animation:bookingDot 1s ease-in-out infinite;
+  }
+  .bookingSubmitDots span:nth-child(2){animation-delay:.15s}
+  .bookingSubmitDots span:nth-child(3){animation-delay:.30s}
+  @keyframes bookingSpin{to{transform:rotate(360deg)}}
+  @keyframes bookingDot{
+    0%,100%{transform:translateY(0);opacity:.45}
+    50%{transform:translateY(-8px);opacity:1}
+  }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
@@ -237,6 +302,15 @@
   </div>
 </div>
 
+<div class="bookingSubmitWrap" id="bookingSubmitModal">
+  <div class="bookingSubmitBox">
+    <div class="bookingSubmitSpinner"></div>
+    <h3 class="bookingSubmitTitle">Confirm Booking</h3>
+    <p class="bookingSubmitText">Please wait, your booking is being submitted...</p>
+    <div class="bookingSubmitDots"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
 <div class="modal" id="modal" onclick="if(event.target.id==='modal')closeModal()">
   <div class="box">
     <h3 id="mt">Message</h3>
@@ -320,6 +394,16 @@ let PIN_OK = false;
 
 function openModal(title, body){ $("mt").textContent = title; $("mb").textContent = body; $("modal").style.display="flex"; }
 function closeModal(){ $("modal").style.display="none"; }
+
+function showBookingSubmitPopup(){
+  $("bookingSubmitModal").style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+function hideBookingSubmitPopup(){
+  $("bookingSubmitModal").style.display = "none";
+  document.body.style.overflow = "auto";
+}
+
 
 
 function getQueryParam(name){
@@ -714,6 +798,8 @@ $("btn").onclick = async ()=>{
     }
 
     $("btn").disabled = true;
+    $("btn").textContent = "Submitting...";
+    showBookingSubmitPopup();
 
     const payload = {
       action:"create",
@@ -757,13 +843,19 @@ $("btn").onclick = async ()=>{
     }
 
     if(out && out.ok){
+      hideBookingSubmitPopup();
+      $("btn").textContent = "✅ Confirm Booking";
       openModal("✅ Booking Saved", "Booking ID: " + out.bookingId);
       resetForm();
     }else{
+      hideBookingSubmitPopup();
+      $("btn").textContent = "✅ Confirm Booking";
       openModal("❌ Error", out?.error || "Failed");
       updateBtn();
     }
   }catch(e){
+    hideBookingSubmitPopup();
+    $("btn").textContent = "✅ Confirm Booking";
     openModal("❌ Error", String(e));
     updateBtn();
   }
