@@ -631,7 +631,7 @@ function updateBtn(){
   const servicePlan = getServicePlanValues();
   const servicePlanOk =
     (plan !== "Monthly" && plan !== "Yearly") ||
-    (servicePlan.servicesPerMonth >= 1 && servicePlan.servicesPerMonth <= 3 && servicePlan.serviceMonths >= 1 && servicePlan.totalServices > 0);
+    (servicePlan.servicesPerMonth >= 1 && servicePlan.servicesPerMonth <= 4 && servicePlan.serviceMonths >= 1 && servicePlan.totalServices > 0);
 
   const ok =
     $("date").value &&
